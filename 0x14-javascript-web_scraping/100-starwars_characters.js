@@ -1,35 +1,14 @@
 #!/usr/bin/node
 
 const request = require('request');
-const process = require('process');
+const starWarsUri = 'https://swapi-api.hbtn.io/api/films/'.concat(process.argv[2]);
 
-// Check if the movie ID is provided as the first argument
-if (process.argv.length < 3) {
-  console.log('Usage: ./print_star_wars_characters.js <Movie_ID>');
-  process.exit(1);
-}
+request(starWarsUri, function (_err, _res, body) {
+  const characters = JSON.parse(body).characters;
 
-const movieID = process.argv[2];
-const apiUrl = `https://swapi-api.alx-tools.com/api/films/${movieID}`;
-
-request.get(apiUrl, { json: true }, (error, response, body) => {
-  if (error) {
-    console.error(`Error: ${error.message}`);
-  } else if (response.statusCode !== 200) {
-    console.error(`Error: Received status code ${response.statusCode}`);
-  } else {
-    const characters = body.characters;
-    
-    characters.forEach(characterUrl => {
-      request.get(characterUrl, { json: true }, (error, response, body) => {
-        if (error) {
-          console.error(`Error: ${error.message}`);
-        } else if (response.statusCode !== 200) {
-          console.error(`Error: Received status code ${response.statusCode}`);
-        } else {
-          console.log(body.name);
-        }
-      });
+  for (let i = 0; i < characters.length; ++i) {
+    request(characters[i], function (_cErr, _cRes, cBody) {
+      console.log(JSON.parse(cBody).name);
     });
   }
 });
