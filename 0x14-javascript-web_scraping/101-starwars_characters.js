@@ -1,43 +1,46 @@
-t request = require('request');
-const process = require('process');
+#!/usr/bin/node
 
-// Check if the movie ID is provided as the first argument
-if (process.argv.length < 3) {
-  console.log('Usage: ./print_star_wars_characters.js <Movie_ID>');
-  process.exit(1);
+const request = require('request');
+
+function getDataFrom (url) {
+  return new Promise(function (resolve, reject) {
+    request(url, function (err, _res, body) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(body);
+      }
+    });
+  });
 }
 
-const movieID = process.argv[2];
-const apiUrl = `https://swapi-api.alx-tools.com/api/films/${movieID}`;
+function errHandler (err) {
+  console.log(err);
+}
 
-request.get(apiUrl, { json: true }, (error, response, body) => {
-  if (error) {
-    console.error(`Error: ${error.message}`);
-  } else if (response.statusCode !== 200) {
-    console.error(`Error: Received status code ${response.statusCode}`);
-  } else {
-    const characters = body.characters;
+function printMovieCharacters (movieId) {
+  const movieUri = `https://swapi-api.hbtn.io/api/films/${movieId}`;
 
-    // Helper function to print characters one by one
-    const printCharacters = (index) => {
-      if (index >= characters.length) {
-        return; // Exit when all characters are printed
+  getDataFrom(movieUri)
+    .then(JSON.parse, errHandler)
+    .then(function (res) {
+      const characters = res.characters;
+      const promises = [];
+
+      for (let i = 0; i < characters.length; ++i) {
+        promises.push(getDataFrom(characters[i]));
       }
 
-      const characterUrl = characters[index];
-      request.get(characterUrl, { json: true }, (error, response, body) => {
-        if (error) {
-          console.error(`Error: ${error.message}`);
-        } else if (response.statusCode !== 200) {
-          console.error(`Error: Received status code ${response.statusCode}`);
-        } else {
-          console.log(body.name); // Print character name
-          printCharacters(index + 1); // Recursively print next character
-        }
-      });
-    };
+      Promise.all(promises)
+        .then((results) => {
+          for (let i = 0; i < results.length; ++i) {
+            console.log(JSON.parse(results[i]).name);
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    });
+}
 
-    // Start printing characters from index 0
-    printCharacters(0);
-  }
-});
+printMovieCharacters(process.argv[2]);
